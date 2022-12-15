@@ -8,7 +8,7 @@ Use of this source code is governed by the MIT license that can be found in the 
 */
 use pgx::cstr_core::CStr;
 use pgx::prelude::*;
-use pgx::{InOutFuncs, PgVarlena, PgVarlenaInOutFuncs, Serializer, StringInfo};
+use pgx::{Deserializer, InOutFuncs, PgVarlena, PgVarlenaInOutFuncs, Serializer, StringInfo};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::str::FromStr;
@@ -157,11 +157,13 @@ pub enum JsonEnumType {
 #[custom_serializer]
 pub struct CustomSerialized;
 
-impl<'de> Serializer<'de> for CustomSerialized {
+impl Serializer for CustomSerialized {
     fn to_writer<W: Write>(&self, mut writer: W) {
         writer.write(&[1]).expect("can't write");
     }
+}
 
+impl<'de> Deserializer<'de> for CustomSerialized {
     fn from_slice(slice: &'de [u8]) -> Self {
         if slice != &[1] {
             panic!("wrong type")
@@ -175,11 +177,13 @@ impl<'de> Serializer<'de> for CustomSerialized {
 #[custom_serializer]
 pub struct AnotherCustomSerialized;
 
-impl<'de> Serializer<'de> for AnotherCustomSerialized {
+impl Serializer for AnotherCustomSerialized {
     fn to_writer<W: Write>(&self, mut writer: W) {
         writer.write(&[0]).expect("can't write");
     }
+}
 
+impl<'de> Deserializer<'de> for AnotherCustomSerialized {
     fn from_slice(slice: &'de [u8]) -> Self {
         if slice != &[0] {
             panic!("wrong type")
