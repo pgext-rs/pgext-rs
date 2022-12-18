@@ -12,6 +12,7 @@ Use of this source code is governed by the MIT license that can be found in the 
 mod tests {
     #[allow(unused_imports)]
     use crate as pgx_tests;
+    use pgx::IntoDatum;
 
     use pgx::prelude::*;
 
@@ -210,6 +211,29 @@ mod tests {
     }
 
     #[pg_test]
+    fn test_cursor_prepared_statement() {
+        Spi::execute(|client| {
+            client.update("CREATE TABLE tests.cursor_table (id int)", None, None);
+            client.update(
+                "INSERT INTO tests.cursor_table (id) \
+            SELECT i FROM generate_series(1, 10) AS t(i)",
+                None,
+                None,
+            );
+            let prepared = client.prepare("SELECT * FROM tests.cursor_table", None);
+            let mut portal = client.open_cursor(&prepared, None);
+
+            fn sum_all(table: pgx::SpiTupleTable) -> i32 {
+                table.map(|r| r.by_ordinal(1).unwrap().value::<i32>().unwrap()).sum()
+            }
+            assert_eq!(sum_all(portal.fetch(3)), 1 + 2 + 3);
+            assert_eq!(sum_all(portal.fetch(3)), 4 + 5 + 6);
+            assert_eq!(sum_all(portal.fetch(3)), 7 + 8 + 9);
+            assert_eq!(sum_all(portal.fetch(3)), 10);
+        });
+    }
+
+    #[pg_test]
     fn test_cursor_by_name() {
         let cursor_name = Spi::connect(|client| {
             client.update("CREATE TABLE tests.cursor_table (id int)", None, None);
@@ -320,5 +344,58 @@ mod tests {
             assert!(a.get_heap_tuple().is_none());
             assert!(a.get_datum::<i32>(1).is_none());
         });
+    }
+
+    #[pg_test]
+    fn test_prepared_statement() {
+        let rc = Spi::connect(|client| {
+            let prepared =
+                client.prepare("SELECT $1", Some(vec![PgOid::BuiltIn(PgBuiltInOids::INT4OID)]));
+            Ok(client
+                .select(&prepared, None, Some(vec![42.into_datum()]))
+                .unwrap()
+                .first()
+                .get_datum::<i32>(1))
+        });
+
+        assert_eq!(42, rc.expect("SPI failed to return proper value"))
+    }
+
+    #[pg_test]
+    fn test_prepared_statement_argument_mismatch() {
+        use pgx::PreparedStatementError;
+        let err = Spi::connect(|client| {
+            let prepared =
+                client.prepare("SELECT $1", Some(vec![PgOid::BuiltIn(PgBuiltInOids::INT4OID)]));
+            Ok(Some(client.select(&prepared, None, None)))
+        })
+        .unwrap()
+        .unwrap_err();
+
+        assert!(matches!(
+            err,
+            PreparedStatementError::ArgumentCountMismatch { expected: 1, got: 0 }
+        ));
+    }
+
+    #[pg_test]
+    fn test_owned_prepared_statement() {
+        let prepared = Spi::connect(|client| {
+            Ok(Some(
+                client
+                    .prepare("SELECT $1", Some(vec![PgOid::BuiltIn(PgBuiltInOids::INT4OID)]))
+                    .keep(),
+            ))
+        })
+        .unwrap();
+        let rc = Spi::connect(|client| {
+            Ok(client
+                .select(&prepared, None, Some(vec![42.into_datum()]))
+                .unwrap()
+                .first()
+                .get_datum::<i32>(1))
+        });
+
+        assert_eq!(42, rc.expect("SPI failed to return proper value"))
     }
 }
