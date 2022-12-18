@@ -67,6 +67,7 @@ pub mod spi;
 #[cfg(feature = "cshim")]
 pub mod spinlock;
 pub mod stringinfo;
+pub mod subxact;
 pub mod trigger_support;
 pub mod tupdesc;
 pub mod varlena;
