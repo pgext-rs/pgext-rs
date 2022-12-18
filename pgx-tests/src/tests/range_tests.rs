@@ -212,8 +212,9 @@ mod tests {
     fn test_range_i64_rt_values() {
         let matched = Spi::get_one::<bool>(
             "SELECT range_i64_rt_values(int8range'[1,10)') = int8range'[1,10)'",
-        );
-        assert!(matched.unwrap());
+        )
+        .unwrap();
+        assert!(matched);
     }
 
     #[pg_test]

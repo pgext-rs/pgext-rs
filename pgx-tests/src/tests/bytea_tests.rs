@@ -22,8 +22,7 @@ mod tests {
 
     #[pg_test]
     fn test_return_bytes() {
-        let bytes =
-            Spi::get_one::<&[u8]>("SELECT tests.return_bytes();").expect("SPI result was null");
+        let bytes = Spi::get_one::<&[u8]>("SELECT tests.return_bytes();").unwrap();
         assert_eq!(bytes, b"bytes")
     }
 
@@ -34,8 +33,8 @@ mod tests {
 
     #[pg_test]
     fn test_return_bytes_slice() {
-        let slice = Spi::get_one::<&[u8]>("SELECT tests.return_bytes_slice('abcdefg'::bytea);")
-            .expect("SPI result was null");
+        let slice =
+            Spi::get_one::<&[u8]>("SELECT tests.return_bytes_slice('abcdefg'::bytea);").unwrap();
         assert_eq!(slice, b"bcd")
     }
 
@@ -46,8 +45,7 @@ mod tests {
 
     #[pg_test]
     fn test_return_vec_bytes() {
-        let vec = Spi::get_one::<Vec<u8>>("SELECT tests.return_vec_bytes();")
-            .expect("SPI result was null");
+        let vec = Spi::get_one::<Vec<u8>>("SELECT tests.return_vec_bytes();").unwrap();
         assert_eq!(vec.as_slice(), b"bytes")
     }
 
@@ -58,8 +56,8 @@ mod tests {
 
     #[pg_test]
     fn test_return_vec_subvec() {
-        let vec = Spi::get_one::<Vec<u8>>("SELECT tests.return_vec_subvec('abcdefg'::bytea);")
-            .expect("SPI result was null");
+        let vec =
+            Spi::get_one::<Vec<u8>>("SELECT tests.return_vec_subvec('abcdefg'::bytea);").unwrap();
         assert_eq!(vec.as_slice(), b"bcd")
     }
 }

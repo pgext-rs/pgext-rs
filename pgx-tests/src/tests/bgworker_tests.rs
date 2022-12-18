@@ -104,11 +104,7 @@ mod tests {
         let handle = worker.terminate();
         handle.wait_for_shutdown().expect("aborted shutdown");
 
-        assert_eq!(
-            124,
-            Spi::get_one::<i32>("SELECT v FROM tests.bgworker_test;")
-                .expect("no return value from the worker")
-        );
+        assert_eq!(124, Spi::get_one::<i32>("SELECT v FROM tests.bgworker_test;").unwrap());
     }
 
     #[pg_test]
@@ -155,10 +151,6 @@ mod tests {
         let handle = worker.terminate();
         handle.wait_for_shutdown().expect("aborted shutdown");
 
-        assert_eq!(
-            123,
-            Spi::get_one::<i32>("SELECT v FROM tests.bgworker_test_return;")
-                .expect("no return value from the worker")
-        );
+        assert_eq!(123, Spi::get_one::<i32>("SELECT v FROM tests.bgworker_test_return;").unwrap());
     }
 }

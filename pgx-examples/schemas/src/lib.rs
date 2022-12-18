@@ -74,7 +74,7 @@ mod tests {
     fn test_hello_default_schema() {
         assert_eq!(
             "Hello from the schema where you installed this extension",
-            Spi::get_one::<&str>("SELECT hello_default_schema()").expect("SPI result was NULL")
+            Spi::get_one::<&str>("SELECT hello_default_schema()").unwrap()
         );
     }
 
@@ -84,7 +84,7 @@ mod tests {
             "test",
             // we don't need to qualify "MyType" because whatever schema it was created in
             // is applied to the "search_path" of this test function
-            Spi::get_one::<MyType>("SELECT '\"test\"'::MyType").expect("SPI reault was NULL").0
+            Spi::get_one::<MyType>("SELECT '\"test\"'::MyType").unwrap().0
         );
     }
 
@@ -93,29 +93,31 @@ mod tests {
         assert_eq!(
             "Hello from some_schema",
             // "hello_some_schema()" is in "some_schema", so it needs to be qualified
-            Spi::get_one::<&str>("SELECT some_schema.hello_some_schema()")
-                .expect("SPI result was NULL")
+            Spi::get_one::<&str>("SELECT some_schema.hello_some_schema()").unwrap()
         );
     }
 
     #[pg_test]
     fn test_my_some_schema_type() {
-        assert_eq!(
-            String::from("test"),
-            // "MySomeSchemaType" is in 'some_schema', so it needs to be qualified
-            Spi::get_one::<MySomeSchemaType>("SELECT '\"test\"'::some_schema.MySomeSchemaType")
-                .expect("SPI result was NULL")
-                .0
-        )
+        Spi::execute(|c| {
+            // "MySomeSchemaType" is in 'some_schema', so it needs to be discoverable
+            c.update("SET search_path TO some_schema,public", None, None);
+            assert_eq!(
+                String::from("test"),
+                c.select("SELECT '\"test\"'::MySomeSchemaType", None, None)
+                    .first()
+                    .get_one::<MySomeSchemaType>()
+                    .unwrap()
+                    .0
+            );
+        });
     }
 
     #[pg_test]
     fn test_my_pg_catalog_type() {
         assert_eq!(
             String::from("test"),
-            Spi::get_one::<MyPgCatalogType>("SELECT '\"test\"'::MyPgCatalogType")
-                .expect("SPI result was NULL")
-                .0
+            Spi::get_one::<MyPgCatalogType>("SELECT '\"test\"'::MyPgCatalogType").unwrap().0
         )
     }
 
@@ -123,7 +125,7 @@ mod tests {
     fn test_hello_public() {
         assert_eq!(
             "Hello from the public schema",
-            Spi::get_one::<&str>("SELECT hello_public()").expect("SPI result was NULL")
+            Spi::get_one::<&str>("SELECT hello_public()").unwrap()
         )
     }
 }

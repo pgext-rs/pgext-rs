@@ -38,7 +38,7 @@ mod tests {
     #[pg_test]
     fn test_spi_returns_primitive() {
         let rc = Spi::connect(|client| {
-            Ok(client.select("SELECT 42", None, None).first().get_datum::<i32>(1))
+            client.select("SELECT 42", None, None).first().get_datum::<i32>(1)
         });
 
         assert_eq!(42, rc.expect("SPI failed to return proper value"))
@@ -47,7 +47,7 @@ mod tests {
     #[pg_test]
     fn test_spi_returns_str() {
         let rc = Spi::connect(|client| {
-            Ok(client.select("SELECT 'this is a test'", None, None).first().get_datum::<&str>(1))
+            client.select("SELECT 'this is a test'", None, None).first().get_datum::<&str>(1)
         });
 
         assert_eq!("this is a test", rc.expect("SPI failed to return proper value"))
@@ -56,7 +56,7 @@ mod tests {
     #[pg_test]
     fn test_spi_returns_string() {
         let rc = Spi::connect(|client| {
-            Ok(client.select("SELECT 'this is a test'", None, None).first().get_datum::<String>(1))
+            client.select("SELECT 'this is a test'", None, None).first().get_datum::<String>(1)
         });
 
         assert_eq!("this is a test", rc.expect("SPI failed to return proper value"))
@@ -73,11 +73,14 @@ mod tests {
     #[pg_test]
     fn test_spi_get_two() {
         Spi::execute(|client| {
-            let (i, s) =
-                client.select("SELECT 42, 'test'", None, None).first().get_two::<i64, &str>();
+            let (i, s) = client
+                .select("SELECT 42, 'test'", None, None)
+                .first()
+                .get_two::<i64, &str>()
+                .unwrap();
 
-            assert_eq!(42, i.unwrap());
-            assert_eq!("test", s.unwrap());
+            assert_eq!(42, i);
+            assert_eq!("test", s);
         });
     }
 
@@ -87,41 +90,36 @@ mod tests {
             let (i, s, b) = client
                 .select("SELECT 42, 'test', true", None, None)
                 .first()
-                .get_three::<i64, &str, bool>();
+                .get_three::<i64, &str, bool>()
+                .unwrap();
 
-            assert_eq!(42, i.unwrap());
-            assert_eq!("test", s.unwrap());
-            assert_eq!(true, b.unwrap());
+            assert_eq!(42, i);
+            assert_eq!("test", s);
+            assert_eq!(true, b);
         });
     }
 
     #[pg_test]
     fn test_spi_get_two_with_failure() {
         Spi::execute(|client| {
-            let (i, s) = client.select("SELECT 42", None, None).first().get_two::<i64, &str>();
-
-            assert_eq!(42, i.unwrap());
-            assert!(s.is_none());
+            assert!(client.select("SELECT 42", None, None).first().get_two::<i64, &str>().is_err());
         });
     }
 
     #[pg_test]
     fn test_spi_get_three_failure() {
         Spi::execute(|client| {
-            let (i, s, b) = client
+            assert!(client
                 .select("SELECT 42, 'test'", None, None)
                 .first()
-                .get_three::<i64, &str, bool>();
-
-            assert_eq!(42, i.unwrap());
-            assert_eq!("test", s.unwrap());
-            assert!(b.is_none());
+                .get_three::<i64, &str, bool>()
+                .is_err());
         });
     }
 
     #[pg_test]
     fn test_spi_select_zero_rows() {
-        assert!(Spi::get_one::<i32>("SELECT 1 LIMIT 0").is_none());
+        assert!(Spi::get_one::<i32>("SELECT 1 LIMIT 0").is_err());
     }
 
     #[pg_test]
@@ -180,11 +178,14 @@ mod tests {
         Spi::execute(|client| {
             client.update("CREATE TABLE tests.null_test (id uuid)", None, None);
         });
-        let result = Spi::get_one_with_args::<i32>(
-            "INSERT INTO tests.null_test VALUES ($1) RETURNING 1",
-            vec![(PgBuiltInOids::UUIDOID.oid(), None)],
+        assert_eq!(
+            Spi::get_one_with_args::<i32>(
+                "INSERT INTO tests.null_test VALUES ($1) RETURNING 1",
+                vec![(PgBuiltInOids::UUIDOID.oid(), None)],
+            )
+            .unwrap(),
+            1
         );
-        assert_eq!(result, Some(1));
     }
 
     #[pg_test]
@@ -197,7 +198,7 @@ mod tests {
                 None,
                 None,
             );
-            let mut portal = client.open_cursor("SELECT * FROM tests.cursor_table", None);
+            let mut portal = client.open_cursor("SELECT * FROM tests.cursor_table", None).unwrap();
 
             fn sum_all(table: pgx::SpiTupleTable) -> i32 {
                 table.map(|r| r.by_ordinal(1).unwrap().value::<i32>().unwrap()).sum()
@@ -219,9 +220,9 @@ mod tests {
                 None,
                 None,
             );
-            let mut cursor = client.open_cursor("SELECT * FROM tests.cursor_table", None);
+            let mut cursor = client.open_cursor("SELECT * FROM tests.cursor_table", None)?;
             assert_eq!(sum_all(cursor.fetch(3)), 1 + 2 + 3);
-            Ok(Some(cursor.detach_into_name()))
+            Ok::<_, pgx::spi::Error>(cursor.detach_into_name())
         })
         .unwrap();
 
@@ -229,33 +230,30 @@ mod tests {
             table.map(|r| r.by_ordinal(1).unwrap().value::<i32>().unwrap()).sum()
         }
         Spi::connect(|client| {
-            let mut cursor = client.find_cursor(&cursor_name);
+            let mut cursor = client.find_cursor(&cursor_name)?;
             assert_eq!(sum_all(cursor.fetch(3)), 4 + 5 + 6);
             assert_eq!(sum_all(cursor.fetch(3)), 7 + 8 + 9);
             cursor.detach_into_name();
-            Ok(None::<()>)
-        });
+            Ok::<_, pgx::spi::Error>(())
+        })
+        .unwrap();
 
         Spi::connect(|client| {
-            let mut cursor = client.find_cursor(&cursor_name);
+            let mut cursor = client.find_cursor(&cursor_name)?;
             assert_eq!(sum_all(cursor.fetch(3)), 10);
-            Ok(None::<()>)
-        });
+            Ok::<_, pgx::spi::Error>(())
+        })
+        .unwrap();
     }
 
     #[pg_test(error = "syntax error at or near \"THIS\"")]
     fn test_cursor_failure() {
-        Spi::execute(|client| {
-            client.open_cursor("THIS IS NOT SQL", None);
-        });
+        Spi::connect(|client| client.open_cursor("THIS IS NOT SQL", None).map(|_| ())).unwrap();
     }
 
-    #[pg_test(error = "cursor named \"NOT A CURSOR\" not found")]
+    #[pg_test(error = "cursor: CursorNotFound(\"NOT A CURSOR\")")]
     fn test_cursor_not_found() {
-        Spi::connect(|client| {
-            client.find_cursor("NOT A CURSOR");
-            Ok(None::<()>)
-        });
+        Spi::connect(|client| client.find_cursor("NOT A CURSOR").map(|_| ())).expect("cursor");
     }
 
     #[pg_test]
@@ -285,7 +283,20 @@ mod tests {
     #[pg_test]
     fn test_connect_return_anything() {
         struct T;
-        assert!(matches!(Spi::connect(|_| Ok(Some(T))).unwrap(), T));
+        assert!(matches!(Spi::connect(|_| Ok::<_, ()>(Some(T))).unwrap().unwrap(), T));
+    }
+
+    #[pg_test]
+    fn test_error_propagation() {
+        #[derive(Debug)]
+        struct Error;
+        let result = Spi::connect(|_| Err::<(), _>(Error));
+        assert!(matches!(result, Err(Error)))
+    }
+
+    #[pg_test]
+    fn test_option() {
+        assert!(Spi::get_one::<Option<i32>>("SELECT NULL::integer").unwrap().is_none());
     }
 
     #[pg_test]
@@ -293,8 +304,8 @@ mod tests {
         // Ensures update and cursor APIs do not need mutable reference to SpiClient
         Spi::execute(|client| {
             client.update("SELECT 1", None, None);
-            let cursor = client.open_cursor("SELECT 1", None).detach_into_name();
-            client.find_cursor(&cursor);
+            let cursor = client.open_cursor("SELECT 1", None).unwrap().detach_into_name();
+            client.find_cursor(&cursor).unwrap();
         });
     }
 
@@ -306,7 +317,7 @@ mod tests {
             assert!(!a.is_empty());
             assert_eq!(1, a.len());
             assert!(a.get_heap_tuple().is_some());
-            assert_eq!(Some(1), a.get_datum(1));
+            assert_eq!(1, a.get_datum::<i32>(1).unwrap());
         });
     }
 
@@ -318,7 +329,7 @@ mod tests {
             assert!(a.is_empty());
             assert_eq!(0, a.len());
             assert!(a.get_heap_tuple().is_none());
-            assert!(a.get_datum::<i32>(1).is_none());
+            assert!(a.get_datum::<i32>(1).is_err());
         });
     }
 }

@@ -66,14 +66,14 @@ mod tests {
         let result = Spi::get_one::<bool>(
             "SELECT return_uuid() = '123e4567-e89b-12d3-a456-426614174000'::uuid;",
         )
-        .expect("SPI result was null");
+        .unwrap();
         assert!(result)
     }
 
     #[pg_test]
     fn test_parse_uuid_v4() {
-        let uuid = Spi::get_one::<Uuid>("SELECT '123e4567-e89b-12d3-a456-426614174000'::uuid;")
-            .expect("SPI result was null");
+        let uuid =
+            Spi::get_one::<Uuid>("SELECT '123e4567-e89b-12d3-a456-426614174000'::uuid;").unwrap();
         assert_eq!(uuid, Uuid::from_bytes(super::TEST_UUID_V4))
     }
 }

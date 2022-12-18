@@ -912,4 +912,21 @@ mod tests {
             Err(TryFromDatumError::IncompatibleTypes),
         );
     }
+
+    #[pg_test]
+    fn test_compatibility() {
+        Spi::get_one::<PgHeapTuple<'_, AllocatedByRust>>(
+            "
+            SELECT ROW('Nami', 2)::Dog
+        ",
+        )
+        .expect("SQL select failed");
+        // Non-composite types are incompatible:
+        assert!(Spi::get_one::<PgHeapTuple<'_, AllocatedByRust>>(
+            "
+            SELECT 1
+        ",
+        )
+        .is_err());
+    }
 }

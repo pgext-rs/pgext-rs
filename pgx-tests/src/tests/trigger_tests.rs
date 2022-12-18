@@ -314,45 +314,56 @@ mod tests {
         );
 
         let marker =
-            Spi::get_one::<&str>("SELECT marker FROM tests.before_insert_trigger_metadata;");
+            Spi::get_one::<&str>("SELECT marker FROM tests.before_insert_trigger_metadata;")
+                .unwrap();
         let trigger_name =
-            Spi::get_one::<&str>("SELECT trigger_name FROM tests.before_insert_trigger_metadata;");
+            Spi::get_one::<&str>("SELECT trigger_name FROM tests.before_insert_trigger_metadata;")
+                .unwrap();
         let trigger_when =
-            Spi::get_one::<&str>("SELECT trigger_when FROM tests.before_insert_trigger_metadata;");
+            Spi::get_one::<&str>("SELECT trigger_when FROM tests.before_insert_trigger_metadata;")
+                .unwrap();
         let trigger_level =
-            Spi::get_one::<&str>("SELECT trigger_level FROM tests.before_insert_trigger_metadata;");
+            Spi::get_one::<&str>("SELECT trigger_level FROM tests.before_insert_trigger_metadata;")
+                .unwrap();
         let trigger_op =
-            Spi::get_one::<&str>("SELECT trigger_op FROM tests.before_insert_trigger_metadata;");
-        let trigger_relid = Spi::get_one::<pg_sys::Oid>(
+            Spi::get_one::<&str>("SELECT trigger_op FROM tests.before_insert_trigger_metadata;")
+                .unwrap();
+        let trigger_relid = Spi::get_one::<Option<pg_sys::Oid>>(
             "SELECT trigger_relid FROM tests.before_insert_trigger_metadata;",
-        );
-        let trigger_old_transition_table_name = Spi::get_one::<&str>(
+        )
+        .unwrap();
+        let trigger_old_transition_table_name = Spi::get_one::<Option<&str>>(
             "SELECT trigger_old_transition_table_name FROM tests.before_insert_trigger_metadata;",
-        );
-        let trigger_new_transition_table_name = Spi::get_one::<&str>(
+        )
+        .unwrap();
+        let trigger_new_transition_table_name = Spi::get_one::<Option<&str>>(
             "SELECT trigger_new_transition_table_name FROM tests.before_insert_trigger_metadata;",
-        );
+        )
+        .unwrap();
         let trigger_table_name = Spi::get_one::<&str>(
             "SELECT trigger_table_name FROM tests.before_insert_trigger_metadata;",
-        );
+        )
+        .unwrap();
         let trigger_table_schema = Spi::get_one::<&str>(
             "SELECT trigger_table_schema FROM tests.before_insert_trigger_metadata;",
-        );
+        )
+        .unwrap();
         let trigger_extra_args = Spi::get_one::<Vec<String>>(
             "SELECT trigger_extra_args FROM tests.before_insert_trigger_metadata;",
-        );
+        )
+        .unwrap();
 
-        assert_eq!(marker, Some("Fox"));
-        assert_eq!(trigger_name, Some("insert_trigger_metadata"));
-        assert_eq!(trigger_when, Some("BEFORE"));
-        assert_eq!(trigger_level, Some("ROW"));
-        assert_eq!(trigger_op, Some("INSERT"));
+        assert_eq!(marker, "Fox");
+        assert_eq!(trigger_name, "insert_trigger_metadata");
+        assert_eq!(trigger_when, "BEFORE");
+        assert_eq!(trigger_level, "ROW");
+        assert_eq!(trigger_op, "INSERT");
         assert!(trigger_relid.is_some());
         assert_eq!(trigger_old_transition_table_name, None);
         assert_eq!(trigger_new_transition_table_name, None);
-        assert_eq!(trigger_table_name, Some("before_insert_trigger_metadata"));
-        assert_eq!(trigger_table_schema, Some("tests"));
-        assert_eq!(trigger_extra_args, Some(vec!["Bears".to_string(), "Dogs".to_string()]));
+        assert_eq!(trigger_table_name, "before_insert_trigger_metadata");
+        assert_eq!(trigger_table_schema, "tests");
+        assert_eq!(trigger_extra_args, vec!["Bears".to_string(), "Dogs".to_string()]);
     }
 
     #[pg_trigger]
@@ -431,49 +442,58 @@ mod tests {
         );
 
         let marker =
-            Spi::get_one::<&str>("SELECT marker FROM tests.before_insert_trigger_metadata_safe;");
+            Spi::get_one::<&str>("SELECT marker FROM tests.before_insert_trigger_metadata_safe;")
+                .unwrap();
         let trigger_name = Spi::get_one::<&str>(
             "SELECT trigger_name FROM tests.before_insert_trigger_metadata_safe;",
-        );
+        )
+        .unwrap();
         let trigger_when = Spi::get_one::<&str>(
             "SELECT trigger_when FROM tests.before_insert_trigger_metadata_safe;",
-        );
+        )
+        .unwrap();
         let trigger_level = Spi::get_one::<&str>(
             "SELECT trigger_level FROM tests.before_insert_trigger_metadata_safe;",
-        );
+        )
+        .unwrap();
         let trigger_op = Spi::get_one::<&str>(
             "SELECT trigger_op FROM tests.before_insert_trigger_metadata_safe;",
-        );
-        let trigger_relid = Spi::get_one::<pg_sys::Oid>(
+        )
+        .unwrap();
+        let trigger_relid = Spi::get_one::<Option<pg_sys::Oid>>(
             "SELECT trigger_relid FROM tests.before_insert_trigger_metadata_safe;",
-        );
-        let trigger_old_transition_table_name = Spi::get_one::<&str>(
+        )
+        .unwrap();
+        let trigger_old_transition_table_name = Spi::get_one::<Option<&str>>(
             "SELECT trigger_old_transition_table_name FROM tests.before_insert_trigger_metadata_safe;",
-        );
-        let trigger_new_transition_table_name = Spi::get_one::<&str>(
+        ).unwrap();
+        let trigger_new_transition_table_name = Spi::get_one::<Option<&str>>(
             "SELECT trigger_new_transition_table_name FROM tests.before_insert_trigger_metadata_safe;",
-        );
+        ).unwrap();
         let trigger_table_name = Spi::get_one::<&str>(
             "SELECT trigger_table_name FROM tests.before_insert_trigger_metadata_safe;",
-        );
+        )
+        .unwrap();
         let trigger_table_schema = Spi::get_one::<&str>(
             "SELECT trigger_table_schema FROM tests.before_insert_trigger_metadata_safe;",
-        );
+        )
+        .unwrap();
         let trigger_extra_args = Spi::get_one::<Vec<String>>(
             "SELECT trigger_extra_args FROM tests.before_insert_trigger_metadata_safe;",
-        );
+        )
+        .unwrap();
 
-        assert_eq!(marker, Some("Fox"));
-        assert_eq!(trigger_name, Some("insert_trigger_metadata_safe"));
-        assert_eq!(trigger_when, Some("BEFORE"));
-        assert_eq!(trigger_level, Some("ROW"));
-        assert_eq!(trigger_op, Some("INSERT"));
+        assert_eq!(marker, "Fox");
+        assert_eq!(trigger_name, "insert_trigger_metadata_safe");
+        assert_eq!(trigger_when, "BEFORE");
+        assert_eq!(trigger_level, "ROW");
+        assert_eq!(trigger_op, "INSERT");
         assert!(trigger_relid.is_some());
         assert_eq!(trigger_old_transition_table_name, None);
         assert_eq!(trigger_new_transition_table_name, None);
-        assert_eq!(trigger_table_name, Some("before_insert_trigger_metadata_safe"));
-        assert_eq!(trigger_table_schema, Some("tests"));
-        assert_eq!(trigger_extra_args, Some(vec!["Bears".to_string(), "Dogs".to_string()]));
+        assert_eq!(trigger_table_name, "before_insert_trigger_metadata_safe");
+        assert_eq!(trigger_table_schema, "tests");
+        assert_eq!(trigger_extra_args, vec!["Bears".to_string(), "Dogs".to_string()]);
     }
 
     #[pg_trigger(sql = r#"

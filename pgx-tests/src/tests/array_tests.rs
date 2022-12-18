@@ -177,65 +177,59 @@ mod tests {
 
     #[pg_test]
     fn test_sum_array_i32() {
-        let sum = Spi::get_one::<i32>("SELECT sum_array(ARRAY[1,2,3]::integer[])");
-        assert!(sum.is_some());
-        assert_eq!(sum.unwrap(), 6);
+        let sum = Spi::get_one::<i32>("SELECT sum_array(ARRAY[1,2,3]::integer[])").unwrap();
+        assert_eq!(sum, 6);
     }
 
     #[pg_test]
     fn test_sum_array_i64() {
-        let sum = Spi::get_one::<i64>("SELECT sum_array(ARRAY[1,2,3]::bigint[])");
-        assert!(sum.is_some());
-        assert_eq!(sum.unwrap(), 6);
+        let sum = Spi::get_one::<i64>("SELECT sum_array(ARRAY[1,2,3]::bigint[])").unwrap();
+        assert_eq!(sum, 6);
     }
 
     #[pg_test]
     fn test_sum_array_i32_sliced() {
-        let sum = Spi::get_one::<i32>("SELECT sum_array_sliced(ARRAY[1,2,3]::integer[])");
-        assert!(sum.is_some());
-        assert_eq!(sum.unwrap(), 6);
+        let sum = Spi::get_one::<i32>("SELECT sum_array_sliced(ARRAY[1,2,3]::integer[])").unwrap();
+        assert_eq!(sum, 6);
     }
 
     #[pg_test]
     fn test_sum_array_i64_sliced() {
-        let sum = Spi::get_one::<i64>("SELECT sum_array_sliced(ARRAY[1,2,3]::bigint[])");
-        assert!(sum.is_some());
-        assert_eq!(sum.unwrap(), 6);
+        let sum = Spi::get_one::<i64>("SELECT sum_array_sliced(ARRAY[1,2,3]::bigint[])").unwrap();
+        assert_eq!(sum, 6);
     }
 
     #[pg_test(error = "attempt to add with overflow")]
     fn test_sum_array_i32_overflow() {
         Spi::get_one::<i64>(
             "SELECT sum_array(a) FROM (SELECT array_agg(s) a FROM generate_series(1, 1000000) s) x;",
-        );
+        ).unwrap();
     }
 
     #[pg_test]
     fn test_count_true() {
-        let cnt = Spi::get_one::<i32>("SELECT count_true(ARRAY[true, true, false, true])");
-        assert!(cnt.is_some());
-        assert_eq!(cnt.unwrap(), 3);
+        let cnt = Spi::get_one::<i32>("SELECT count_true(ARRAY[true, true, false, true])").unwrap();
+        assert_eq!(cnt, 3);
     }
 
     #[pg_test]
     fn test_count_true_sliced() {
-        let cnt = Spi::get_one::<i32>("SELECT count_true_sliced(ARRAY[true, true, false, true])");
-        assert!(cnt.is_some());
-        assert_eq!(cnt.unwrap(), 3);
+        let cnt = Spi::get_one::<i32>("SELECT count_true_sliced(ARRAY[true, true, false, true])")
+            .unwrap();
+        assert_eq!(cnt, 3);
     }
 
     #[pg_test]
     fn test_count_nulls() {
-        let cnt = Spi::get_one::<i32>("SELECT count_nulls(ARRAY[NULL, 1, 2, NULL]::integer[])");
-        assert!(cnt.is_some());
-        assert_eq!(cnt.unwrap(), 2);
+        let cnt =
+            Spi::get_one::<i32>("SELECT count_nulls(ARRAY[NULL, 1, 2, NULL]::integer[])").unwrap();
+        assert_eq!(cnt, 2);
     }
 
     #[pg_test]
     fn test_optional_array() {
-        let sum = Spi::get_one::<f32>("SELECT optional_array_arg(ARRAY[1,2,3]::real[])");
-        assert!(sum.is_some());
-        assert_eq!(sum.unwrap(), 6f32);
+        let sum = Spi::get_one::<f32>("SELECT optional_array_arg(ARRAY[1,2,3]::real[])").unwrap();
+        assert_eq!(sum, 6f32);
     }
 
     #[pg_test(error = "array contains NULL")]
@@ -248,7 +242,7 @@ mod tests {
         let json = Spi::get_one::<Json>(
             "SELECT serde_serialize_array(ARRAY['one', null, 'two', 'three'])",
         )
-        .expect("returned json was null");
+        .unwrap();
         assert_eq!(json.0, json! {{"values": ["one", null, "two", "three"]}});
     }
 
@@ -262,14 +256,14 @@ mod tests {
     #[pg_test]
     fn test_serde_serialize_array_i32() {
         let json = Spi::get_one::<Json>("SELECT serde_serialize_array_i32(ARRAY[1,2,3,null, 4])")
-            .expect("returned json was null");
+            .expect("failed to get SPI result");
         assert_eq!(json.0, json! {{"values": [1,2,3,null,4]}});
     }
 
     #[pg_test(error = "array contains NULL")]
     fn test_serde_serialize_array_i32_deny_null() {
         Spi::get_one::<Json>("SELECT serde_serialize_array_i32_deny_null(ARRAY[1,2,3,null, 4])")
-            .expect("returned json was null");
+            .expect("failed to get SPI result");
     }
 
     #[pg_test]
@@ -290,7 +284,7 @@ mod tests {
     fn test_slice_to_array() {
         let owned_vec = vec![Some(1), Some(2), Some(3), None, Some(4)];
         let json = Spi::connect(|client| {
-            let json = client
+            client
                 .select(
                     "SELECT serde_serialize_array_i32($1)",
                     None,
@@ -301,8 +295,6 @@ mod tests {
                 )
                 .first()
                 .get_one::<Json>()
-                .expect("returned json was null");
-            Ok(Some(json))
         })
         .expect("Failed to return json even though it's right there ^^");
         assert_eq!(json.0, json! {{"values": [1, 2, 3, null, 4]}});
@@ -355,25 +347,29 @@ mod tests {
 
     #[pg_test]
     fn test_arr_to_vec() {
-        let result = Spi::get_one::<Vec<i32>>("SELECT arr_mapped_vec(ARRAY[3,2,2,1]::integer[])");
-        let other = Spi::get_one::<Vec<i32>>("SELECT arr_into_vec(ARRAY[3,2,2,1]::integer[])");
+        let result =
+            Spi::get_one::<Vec<i32>>("SELECT arr_mapped_vec(ARRAY[3,2,2,1]::integer[])").unwrap();
+        let other =
+            Spi::get_one::<Vec<i32>>("SELECT arr_into_vec(ARRAY[3,2,2,1]::integer[])").unwrap();
         // One should be equivalent to the canonical form.
-        assert_eq!(result, Some(vec![3, 2, 2, 1]));
+        assert_eq!(result, vec![3, 2, 2, 1]);
         // And they should be equal to each other.
         assert_eq!(result, other);
     }
 
     #[pg_test]
     fn test_arr_sort_uniq() {
-        let result = Spi::get_one::<Vec<i32>>("SELECT arr_sort_uniq(ARRAY[3,2,2,1]::integer[])");
-        assert_eq!(result, Some(vec![1, 2, 3]));
+        let result =
+            Spi::get_one::<Vec<i32>>("SELECT arr_sort_uniq(ARRAY[3,2,2,1]::integer[])").unwrap();
+        assert_eq!(result, vec![1, 2, 3]);
     }
 
     #[pg_test]
     #[should_panic]
     fn test_arr_sort_uniq_with_null() {
         let _result =
-            Spi::get_one::<Vec<i32>>("SELECT arr_sort_uniq(ARRAY[3,2,NULL,2,1]::integer[])");
+            Spi::get_one::<Vec<i32>>("SELECT arr_sort_uniq(ARRAY[3,2,NULL,2,1]::integer[])")
+                .unwrap();
         // No assert because we're testing for the panic.
     }
 }

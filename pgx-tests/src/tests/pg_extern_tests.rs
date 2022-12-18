@@ -52,7 +52,7 @@ mod tests {
 
     // Ensures `@MODULE_PATHNAME@` and `@FUNCTION_NAME@` are handled.
     #[pg_extern(sql = r#"
-        CREATE FUNCTION tests."overridden_sql_with_fn_name"() RETURNS void
+        CREATE FUNCTION tests."overridden_sql_with_fn_name"() RETURNS boolean
         STRICT
         LANGUAGE c /* Rust */
         AS '@MODULE_PATHNAME@', '@FUNCTION_NAME@';
